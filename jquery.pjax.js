@@ -253,6 +253,11 @@ function pjax(options) {
       return
     }
 
+    if (options.push && !options.replace) {
+      // Cache current container element before replacing it
+      cachePush(pjax.state.id, context.clone().contents())
+    }
+
     pjax.state = {
       id: options.id || uniqueId(),
       url: container.url,
@@ -262,7 +267,9 @@ function pjax(options) {
       timeout: options.timeout
     }
 
-    if (options.push || options.replace) {
+    if (options.push) {
+      window.history.pushState(pjax.state, container.title, container.url)
+    } else if (options.replace) {
       window.history.replaceState(pjax.state, container.title, container.url)
     }
 
@@ -341,13 +348,6 @@ function pjax(options) {
   var xhr = pjax.xhr = $.ajax(options)
 
   if (xhr.readyState > 0) {
-    if (options.push && !options.replace) {
-      // Cache current container element before replacing it
-      cachePush(pjax.state.id, context.clone().contents())
-
-      window.history.pushState(null, "", stripPjaxParam(options.requestUrl))
-    }
-
     fire('pjax:start', [xhr, options])
     fire('pjax:send', [xhr, options])
   }
