@@ -371,13 +371,16 @@ function pjaxReload(container, options) {
 
 // Internal: Hard replace current state with url.
 //
-// Work for around WebKit
-//   https://bugs.webkit.org/show_bug.cgi?id=93506
-//
 // Returns nothing.
-function locationReplace(url) {
+function locationReplace(url, replace) {
+  // Workaround for WebKit bug
+  //   https://bugs.webkit.org/show_bug.cgi?id=93506
   window.history.replaceState(null, "", "#")
-  window.location.replace(url)
+  if (!!replace) {
+    window.location.replace(url)
+  } else{
+    window.location.assign(url)
+  }
 }
 
 
@@ -461,7 +464,7 @@ function onPjaxPopstate(event) {
       // scroll position.
       container[0].offsetHeight
     } else {
-      locationReplace(location.href)
+      locationReplace(location.href, true)
     }
   }
   initialPop = false

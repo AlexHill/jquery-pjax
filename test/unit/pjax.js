@@ -750,6 +750,41 @@ if ($.support.pjax) {
     }, 0)
   }
 
+  asyncTest("correct history sequence maintained through hard loads", function() {
+    var frame = this.frame
+    var iframe = this.iframe
+
+    equal(frame.location.pathname, "/home.html")
+    equal(frame.document.title, "Home")
+
+    frame.$("#main").one('pjax:complete', function() {
+
+      equal(frame.location.pathname, "/hello.html")
+      equal(frame.document.title, "Hello")
+
+      var pathnames = ["/hello.html", "/timeout.html"];
+
+      iframe.onload = function() {
+        equal(frame.location.pathname, pathnames.pop())
+        if (pathnames.length) {
+          frame.history.back()
+        } else {
+          start()
+        }
+      }
+
+      frame.$.pjax({
+        url: "timeout.html",
+        container: "#main"
+      })
+    })
+
+    frame.$.pjax({
+      url: "hello.html",
+      container: "#main"
+    })
+  })
+
   asyncTest("clicking back while loading maintains history", function() {
     var frame = this.frame
 
