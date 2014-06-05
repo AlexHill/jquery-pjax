@@ -253,6 +253,11 @@ function pjax(options) {
       return
     }
 
+    if (options.push && !options.replace) {
+      // Cache current container element before replacing it
+      cachePush(pjax.state.id, context.clone().contents())
+    }
+
     pjax.state = {
       id: options.id || uniqueId(),
       url: container.url,
@@ -262,7 +267,9 @@ function pjax(options) {
       timeout: options.timeout
     }
 
-    if (options.push || options.replace) {
+    if (options.push) {
+      window.history.pushState(pjax.state, container.title, container.url)
+    } else if (options.replace) {
       window.history.replaceState(pjax.state, container.title, container.url)
     }
 
@@ -337,13 +344,6 @@ function pjax(options) {
   var xhr = pjax.xhr = $.ajax(options)
 
   if (xhr.readyState > 0) {
-    if (options.push && !options.replace) {
-      // Cache current container element before replacing it
-      cachePush(pjax.state.id, context.clone().contents())
-
-      window.history.pushState(null, "", stripPjaxParam(options.requestUrl))
-    }
-
     fire('pjax:start', [xhr, options])
     fire('pjax:send', [xhr, options])
   }
@@ -367,17 +367,16 @@ function pjaxReload(container, options) {
 
 // Internal: Hard replace current state with url.
 //
-// Work for around WebKit
-//   https://bugs.webkit.org/show_bug.cgi?id=93506
-//
 // Returns nothing.
-function locationReplace(url) {
-  window.history.back()
-  setTimeout(function() {
-    window.history.replaceState(null, "", "#")
+function locationReplace(url, replace) {
+  // Workaround for WebKit bug
+  //   https://bugs.webkit.org/show_bug.cgi?id=93506
+  window.history.replaceState(null, "", "#")
+  if (!!replace) {
+    window.location.replace(url)
+  } else {
     window.location.assign(url)
-  }, 0)
-
+  }
 }
 
 
@@ -467,7 +466,7 @@ function onPjaxPopstate(event) {
       // scroll position.
       container[0].offsetHeight
     } else {
-      locationReplace(location.href)
+      locationReplace(location.href, true)
     }
   }
   initialPop = false

@@ -20,14 +20,23 @@ if ($.support.pjax) {
   asyncTest("pushes new url", function() {
     var frame = this.frame
 
+    frame.$('#main').on('pjax:send', function() {
+      equal(frame.location.pathname, "/home.html")
+    })
+
     frame.$('#main').on('pjax:success', function() {
       equal(frame.location.pathname, "/hello.html")
       start()
     })
+
     frame.$.pjax({
       url: "hello.html",
       container: "#main"
     })
+
+    // URL is not set immediately
+    equal(frame.location.pathname, "/home.html")
+
   })
 
   asyncTest("replaces container html from response data", function() {
@@ -264,10 +273,6 @@ if ($.support.pjax) {
       data: { foo: 1, bar: 2 },
       container: "#main"
     })
-
-    // URL is set immediately
-    equal(frame.location.pathname, "/env.html")
-    equal(frame.location.search, "?foo=1&bar=2")
   })
 
   asyncTest("GET data is merged into query string", function() {
@@ -287,10 +292,6 @@ if ($.support.pjax) {
       data: { bar: 2 },
       container: "#main"
     })
-
-    // URL is set immediately
-    equal(frame.location.pathname, "/env.html")
-    equal(frame.location.search, "?foo=1&bar=2")
   })
 
 
@@ -717,7 +718,7 @@ if ($.support.pjax) {
     var frame = this.frame
 
     frame.$("#main").on("pjax:complete", function() {
-      equal(frame.location.pathname, "/boom.html")
+      equal(frame.location.pathname, "/home.html")
       start()
     })
     frame.$("#main").on("pjax:error", function(event, xhr) {
@@ -777,7 +778,90 @@ if ($.support.pjax) {
         }, 500)
 
         frame.history.back()
+      })
 
+      frame.$.pjax({
+        url: "timeout.html",
+        container: "#main"
+      })
+    })
+
+    frame.$.pjax({
+      url: "hello.html",
+      container: "#main"
+    })
+  })
+
+  asyncTest("correct history sequence maintained through hard loads", function() {
+    var frame = this.frame
+    var iframe = this.iframe
+
+    equal(frame.location.pathname, "/home.html")
+    equal(frame.document.title, "Home")
+
+    frame.$("#main").one('pjax:complete', function() {
+
+      equal(frame.location.pathname, "/hello.html")
+      equal(frame.document.title, "Hello")
+
+      var pathnames = ["/hello.html", "/timeout.html"];
+
+      iframe.onload = function() {
+        equal(frame.location.pathname, pathnames.pop())
+        if (pathnames.length) {
+          frame.history.back()
+        } else {
+          start()
+        }
+      }
+
+      frame.$.pjax({
+        url: "timeout.html",
+        container: "#main"
+      })
+    })
+
+    frame.$.pjax({
+      url: "hello.html",
+      container: "#main"
+    })
+  })
+
+  asyncTest("clicking back while loading maintains history", function() {
+    var frame = this.frame
+
+    equal(frame.location.pathname, "/home.html")
+    equal(frame.document.title, "Home")
+
+    frame.$("#main").on('pjax:timeout', function(e) {
+      e.preventDefault();
+    })
+
+    frame.$("#main").one('pjax:complete', function() {
+
+      equal(frame.location.pathname, "/hello.html")
+      equal(frame.document.title, "Hello")
+
+      frame.$("#main").one('pjax:send', function() {
+
+        // don't use goBack here, because pjax:end isn't triggered
+        // when clicking back while loading
+
+        frame.history.back();
+
+        setTimeout(function() {
+          equal(frame.location.pathname, "/home.html")
+          equal(frame.document.title, "Home")
+
+          frame.history.forward()
+
+          setTimeout(function() {
+            equal(frame.location.pathname, "/hello.html")
+            equal(frame.document.title, "Hello")
+            start()
+          }, 250)
+
+        }, 250)
       })
 
       frame.$.pjax({
