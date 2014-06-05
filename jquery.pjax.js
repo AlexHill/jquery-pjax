@@ -253,24 +253,26 @@ function pjax(options) {
       return
     }
 
-    if (options.push && !options.replace) {
-      // Cache current container element before replacing it
-      cachePush(pjax.state.id, context.clone().contents())
-    }
+    if (options.push || options.replace) {
+      if (options.push && !options.replace) {
+        // Cache current container element before replacing it
+        cachePush(pjax.state.id, context.clone().contents())
+      }
 
-    pjax.state = {
-      id: options.id || uniqueId(),
-      url: container.url,
-      title: container.title,
-      container: context.selector,
-      fragment: options.fragment,
-      timeout: options.timeout
-    }
+      pjax.state = {
+        id: options.id || uniqueId(),
+        url: container.url,
+        title: container.title,
+        container: context.selector,
+        fragment: options.fragment,
+        timeout: options.timeout
+      }
 
-    if (options.push) {
-      window.history.pushState(pjax.state, container.title, container.url)
-    } else if (options.replace) {
-      window.history.replaceState(pjax.state, container.title, container.url)
+      if (options.push) {
+        window.history.pushState(pjax.state, container.title, container.url)
+      } else if (options.replace) {
+        window.history.replaceState(pjax.state, container.title, container.url)
+      }
     }
 
     // Clear out any focused controls before inserting new page contents.
@@ -325,7 +327,7 @@ function pjax(options) {
   // using the container and options of the link we're loading for the
   // back button to the initial page. This ensures good back button
   // behavior.
-  if (!pjax.state) {
+  if ((options.push || options.replace) && !pjax.state) {
     pjax.state = {
       id: uniqueId(),
       url: window.location.href,
@@ -444,6 +446,7 @@ function onPjaxPopstate(event) {
         url: state.url,
         container: container,
         push: false,
+        replace: true,
         fragment: state.fragment,
         timeout: state.timeout,
         scrollTo: false
